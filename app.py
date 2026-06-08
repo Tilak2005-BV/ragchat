@@ -113,6 +113,82 @@ def chunk_text(text, chunk_size=800, overlap=100):
         i += chunk_size - overlap
     return chunks
 
+import requests
+
+def send_email_message(subject, recipients, html_body, reply_to=None):
+    """
+    Sends an email using Resend, SendGrid, Mailtrap, or falls back to Flask-Mail SMTP.
+    HTTP APIs bypass Render's strict SMTP port blocking.
+    """
+    # Prefer SENDER_EMAIL if available, else fallback to MAIL_USERNAME
+    sender_email = os.environ.get('SENDER_EMAIL', os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai'))
+    
+    # 1. Try Resend API
+    resend_key = os.environ.get('RESEND_API_KEY')
+    if resend_key:
+        headers = {
+            'Authorization': f'Bearer {resend_key}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "from": f"RAGChat <{sender_email}>",
+            "to": recipients,
+            "subject": subject,
+            "html": html_body
+        }
+        if reply_to:
+            data["reply_to"] = reply_to
+        res = requests.post('https://api.resend.com/emails', json=data, headers=headers)
+        if res.status_code >= 400:
+            raise Exception(f"Resend API Error: {res.text}")
+        return
+
+    # 2. Try SendGrid API
+    sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+    if sendgrid_key:
+        headers = {
+            'Authorization': f'Bearer {sendgrid_key}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "personalizations": [{"to": [{"email": r} for r in recipients]}],
+            "from": {"email": sender_email},
+            "subject": subject,
+            "content": [{"type": "text/html", "value": html_body}]
+        }
+        if reply_to:
+            data["reply_to"] = {"email": reply_to}
+        res = requests.post('https://api.sendgrid.com/v3/mail/send', json=data, headers=headers)
+        if res.status_code >= 400:
+            raise Exception(f"SendGrid API Error: {res.text}")
+        return
+        
+    # 3. Try Mailtrap API
+    mailtrap_key = os.environ.get('MAILTRAP_API_KEY')
+    if mailtrap_key:
+        headers = {
+            'Authorization': f'Bearer {mailtrap_key}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "from": {"email": sender_email, "name": "RAGChat"},
+            "to": [{"email": r} for r in recipients],
+            "subject": subject,
+            "html": html_body
+        }
+        if reply_to:
+            data["headers"] = {"Reply-To": reply_to}
+        res = requests.post('https://send.api.mailtrap.io/api/send', json=data, headers=headers)
+        if res.status_code >= 400:
+            raise Exception(f"Mailtrap API Error: {res.text}")
+        return
+
+    # 4. Fallback to standard SMTP (Flask-Mail)
+    msg = Message(subject=subject, sender=sender_email, recipients=recipients, html=html_body)
+    if reply_to:
+        msg.reply_to = reply_to
+    mail.send(msg)
+
 def find_relevant_chunks(query, chunks, top_k=4):
     query_words = set(query.lower().split())
     scored = []
@@ -246,14 +322,11 @@ def request_reset():
     """
 
     try:
-        sender_email = os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai')
-        msg = Message(
+        send_email_message(
             subject='RAGChat — Reset Your Password',
-            sender=sender_email,
             recipients=[user.email],
             html=email_html
         )
-        mail.send(msg)
     except Exception as e:
         print(f"Mail error: {e}")
         return jsonify({'error': 'Failed to send the reset email. Please check server mail configuration.'}), 500
@@ -337,17 +410,14 @@ def api_contact():
             </div>
             """
             
-            sender_email = os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai')
-            msg = Message(
+            send_email_message(
                 subject=f'RAGChat Contact: {subject}',
-                sender=sender_email,
                 recipients=[owner],
-                reply_to=email,
-                html=email_html
+                html=email_html,
+                reply_to=email
             )
-            mail.send(msg)
     except Exception as e:
-        print(f"SMTP Error: {e}")
+        print(f"SMTP/API Error: {e}")
         return jsonify({'error': 'Email service currently unavailable'}), 503
     return jsonify({'success': True})
 # â”€â”€â”€ Conversation Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

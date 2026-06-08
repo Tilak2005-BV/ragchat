@@ -1,6 +1,5 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_mail import Mail, Message
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -40,16 +39,24 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB limit for free tier RA
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Email config
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai')
+import os
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 db = SQLAlchemy(app)
-mail = Mail(app)
+
+def send_email(to_email, subject, body):
+    message = Mail(
+        from_email='your-verified-email@example.com',
+        to_emails=to_email,
+        subject=subject,
+        html_content=body
+    )
+    try:
+        sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
+        sg.send(message)
+    except Exception as e:
+        print(f"SendGrid Error: {e}")
 
 ALLOWED_EXTENSIONS = {'pdf'}
 
@@ -246,14 +253,11 @@ def request_reset():
     """
 
     try:
-        sender_email = os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai')
-        msg = Message(
+        send_email(
+            to_email=user.email,
             subject='RAGChat — Reset Your Password',
-            sender=sender_email,
-            recipients=[user.email],
-            html=email_html
+            body=email_html
         )
-        mail.send(msg)
     except Exception as e:
         print(f"Mail error: {e}")
         return jsonify({'error': 'Failed to send the reset email. Please check server mail configuration.'}), 500
@@ -336,16 +340,11 @@ def api_contact():
                 </div>
             </div>
             """
-            
-            sender_email = os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai')
-            msg = Message(
+            send_email(
+                to_email=owner,
                 subject=f'RAGChat Contact: {subject}',
-                sender=sender_email,
-                recipients=[owner],
-                reply_to=email,
-                html=email_html
+                body=email_html
             )
-            mail.send(msg)
     except Exception as e:
         print(f"SMTP Error: {e}")
         return jsonify({'error': 'Email service currently unavailable'}), 503

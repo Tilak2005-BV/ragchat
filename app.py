@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from flask_cors import CORS
@@ -35,7 +35,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'ragchat-secret-2024-xk9
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ragchat.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB limit for free tier RAM
 
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -89,15 +89,19 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def extract_pdf_text(filepath):
-    text = ""
     try:
         with open(filepath, 'rb') as f:
             reader = PyPDF2.PdfReader(f)
-            for page in reader.pages:
-                text += page.extract_text() + "\n"
+            # Limit to first 50 pages to prevent OOM
+            pages_to_read = min(len(reader.pages), 50)
+            text_blocks = []
+            for i in range(pages_to_read):
+                page_text = reader.pages[i].extract_text()
+                if page_text:
+                    text_blocks.append(page_text)
+            return "\n".join(text_blocks)
     except Exception as e:
-        text = f"Error extracting PDF: {str(e)}"
-    return text
+        return f"Error extracting PDF: {str(e)}"
 
 def chunk_text(text, chunk_size=800, overlap=100):
     words = text.split()
@@ -340,8 +344,9 @@ def api_contact():
                 html=email_html
             )
             mail.send(msg)
-    except Exception as me:
-        print(f"Contact mail error: {me}")
+    except Exception as e:
+        print(f"SMTP Error: {e}")
+        return jsonify({'error': 'Email service currently unavailable'}), 503
     return jsonify({'success': True})
 # â”€â”€â”€ Conversation Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

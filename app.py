@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from flask_cors import CORS
@@ -337,8 +337,10 @@ def api_contact():
             </div>
             """
             
+            sender_email = os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai')
             msg = Message(
                 subject=f'RAGChat Contact: {subject}',
+                sender=sender_email,
                 recipients=[owner],
                 reply_to=email,
                 html=email_html

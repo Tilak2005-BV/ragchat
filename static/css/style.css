@@ -1262,7 +1262,18 @@ input, textarea { font-family: inherit; }
   .auth-grid { grid-template-columns: 1fr; width: 95vw; }
   .auth-brand { display: none; }
   .auth-form-side { padding: 40px 28px; }
-  .sidebar { position: absolute; z-index: 200; transform: translateX(-100%); }
+  
+  .sidebar { 
+    position: fixed; 
+    z-index: 999; 
+    transform: translateX(-100%); 
+    width: 85vw; 
+    max-width: 320px; 
+    height: 100vh;
+    box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+  }
   .sidebar.open { transform: translateX(0); }
+  #closeSidebarBtn { display: block !important; }
+  
   .messages-inner { padding: 0 14px; }
 }

@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -46,8 +46,9 @@ from sendgrid.helpers.mail import Mail
 db = SQLAlchemy(app)
 
 def send_email(to_email, subject, body):
+    sender_email = os.environ.get('SENDER_EMAIL', os.environ.get('MAIL_USERNAME', 'noreply@ragchat.ai'))
     message = Mail(
-        from_email='your-verified-email@example.com',
+        from_email=sender_email,
         to_emails=to_email,
         subject=subject,
         html_content=body

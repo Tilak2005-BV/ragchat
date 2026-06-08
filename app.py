@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -305,7 +305,7 @@ def api_contact():
     except Exception as le:
         print(f"Contact log error: {le}")
     try:
-        owner = os.environ.get('MAIL_USERNAME', '')
+        owner = 'tilakatilakachary@gmail.com'
         if owner:
             # Build a beautifully styled HTML email
             email_html = f"""

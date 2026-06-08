@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — RAGChat</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* Auth page floating animation */
+    .auth-grid {
+      animation: floatCard 5s ease-in-out infinite;
+    }
+
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    /* Better theme toggle in top-right */
+    .auth-theme-row {
+      position: fixed;
+      top: 18px; right: 18px;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .auth-theme-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .auth-theme-pill:hover {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .home-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .home-back-btn:hover {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+  </style>
+</head>
+<body class="auth-page">
+
+  <!-- Top controls -->
+  <div class="auth-theme-row">
+    <a href="/" class="home-back-btn">← Home</a>
+    <button class="auth-theme-pill" id="themeToggle">🌙 Dark</button>
+  </div>
+
+  <div class="auth-grid">
+    <!-- Brand panel -->
+    <div class="auth-brand">
+      <div class="brand-logo">
+        <div class="brand-icon" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;font-size:1.1rem;letter-spacing:-0.04em;">RC</div>
+        <span class="brand-name"></span>
+      </div>
+      <h1>Chat with your documents</h1>
+      <p>Upload PDFs and ask questions. Get intelligent answers powered by Gemini AI.</p>
+      <div class="auth-features">
+        <div class="auth-feature">
+          <div class="auth-feature-dot"></div>
+          <span>Upload any PDF document</span>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-dot"></div>
+          <span>Smart chunked retrieval</span>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-dot"></div>
+          <span>Powered by Gemini AI</span>
+        </div>
+        <div class="auth-feature">
+          <div class="auth-feature-dot"></div>
+          <span>Full conversation history</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form panel -->
+    <div class="auth-form-side">
+      <h2>Welcome back</h2>
+      <p class="subtitle">Sign in to continue to RAGChat</p>
+
+      <div class="alert alert-error" id="errorAlert"></div>
+
+      <div class="form-group">
+        <label for="identifier">Email or Username</label>
+        <input type="text" class="form-input" id="identifier" placeholder="you@example.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" class="form-input" id="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <div style="text-align:right; margin-top:-8px; margin-bottom:16px;">
+        <a href="/reset-password" style="font-size:0.82rem; color:var(--text3); border-bottom:1px solid var(--border);">
+          Forgot password?
+        </a>
+      </div>
+
+      <button class="btn btn-primary" id="loginBtn">
+        <span id="loginBtnText">Sign In</span>
+      </button>
+
+      <div class="auth-switch">
+        Don't have an account? <a href="/register">Create one</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.textContent = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      themeToggle.textContent = next === 'dark' ? '☀️ Light' : '🌙 Dark';
+    });
+
+    // Login
+    const loginBtn     = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const errorAlert   = document.getElementById('errorAlert');
+
+    function showError(msg) {
+      errorAlert.textContent = msg;
+      errorAlert.style.display = 'block';
+    }
+
+    function setLoading(loading) {
+      loginBtn.disabled = loading;
+      loginBtnText.innerHTML = loading ? '<span class="spinner"></span>' : 'Sign In';
+    }
+
+    async function login() {
+      const identifier = document.getElementById('identifier').value.trim();
+      const password   = document.getElementById('password').value;
+      errorAlert.style.display = 'none';
+
+      if (!identifier || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res  = await fetch('/api/login', {
+          method:  'POST',
+          headers: {'Content-Type': 'application/json'},
+          body:    JSON.stringify({ identifier, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '/chat';
+        } else {
+          showError(data.error || 'Login failed');
+        }
+      } catch (e) {
+        showError('Connection error. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loginBtn.addEventListener('click', login);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>

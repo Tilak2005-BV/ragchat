@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGChat — AI Document Assistant</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    /* RC Logo Mark */
+    .rc-mark {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: inherit;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* ═══════════════════════════════════════════════════════
+       SPLASH SCREEN
+    ═══════════════════════════════════════════════════════ */
+    #splashScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #2d1b69 0%, #7c3aed 35%, #db2777 65%, #f97316 100%);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    #splashScreen.hiding {
+      opacity: 0;
+      transform: scale(1.04);
+      pointer-events: none;
+    }
+
+    .splash-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+      animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    .splash-logo-icon {
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+    }
+
+    .splash-logo-name {
+      font-family: var(--font-cursive);
+      font-size: 3rem;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.01em;
+    }
+
+    .splash-tagline {
+      font-family: var(--font-sans);
+      font-size: 1rem;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 48px;
+      letter-spacing: 0.04em;
+      animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;
+    }
+
+    .splash-loader {
+      display: flex;
+      gap: 8px;
+      animation: splashPop 0.6s ease 0.2s both;
+    }
+
+    .splash-dot {
+      width: 10px; height: 10px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 50%;
+      animation: splashDotBounce 1.2s ease-in-out infinite;
+    }
+
+    .splash-dot:nth-child(2) { animation-delay: 0.2s; }
+    .splash-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes splashDotBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-14px); opacity: 1; }
+    }
+
+    @keyframes splashPop {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       EMOJI PICKER
+    ═══════════════════════════════════════════════════════ */
+    .emoji-picker {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      width: 320px;
+      max-height: 280px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+      z-index: 500;
+      animation: modalIn 0.18s ease;
+    }
+
+    .emoji-picker.open { display: flex; }
+
+    .emoji-cats {
+      display: flex;
+      padding: 8px 10px 6px;
+      gap: 4px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .emoji-cats::-webkit-scrollbar { height: 0; }
+
+    .emoji-cat-btn {
+      width: 30px; height: 30px;
+      background: transparent;
+      border: 1.5px solid transparent;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .emoji-cat-btn.active,
+    .emoji-cat-btn:hover {
+      background: var(--bg3);
+      border-color: var(--border);
+    }
+
+    .emoji-search {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .emoji-search input {
+      width: 100%;
+      padding: 6px 10px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--text);
+      outline: none;
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      padding: 8px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .emoji-grid::-webkit-scrollbar { width: 3px; }
+    .emoji-grid::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+    .emoji-btn {
+      width: 32px; height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s ease;
+      line-height: 1;
+    }
+
+    .emoji-btn:hover { background: var(--bg3); }
+
+    .emoji-trigger-wrapper {
+      position: relative;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       WELCOME SCREEN — ChatGPT STYLE
+    ═══════════════════════════════════════════════════════ */
+    .welcome-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 65vh;
+      text-align: center;
+      padding: 0 20px;
+    }
+
+    .welcome-logo {
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 22px;
+      animation: splashPop 0.5s ease both;
+      color: var(--text);
+    }
+
+    .welcome-screen h2 {
+      font-family: var(--font-cursive);
+      font-size: 2.2rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      animation: splashPop 0.5s ease 0.08s both;
+    }
+
+    .welcome-screen > p {
+      font-size: 0.92rem;
+      color: var(--text3);
+      max-width: 420px;
+      line-height: 1.7;
+      margin-bottom: 36px;
+      animation: splashPop 0.5s ease 0.12s both;
+    }
+
+    .prompt-suggestions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      max-width: 600px;
+      width: 100%;
+      animation: splashPop 0.5s ease 0.16s both;
+    }
+
+    .prompt-card {
+      padding: 14px 16px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .prompt-card:hover {
+      border-color: var(--text2);
+      background: var(--bg3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .prompt-card-icon { font-size: 18px; }
+    .prompt-card-text { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+    .prompt-card-sub  { font-size: 0.74rem; color: var(--text3); }
+
+    /* ═══════════════════════════════════════════════════════
+       PROFILE MODAL — ADVANCED
+    ═══════════════════════════════════════════════════════ */
+    .profile-modal-body { display: flex; flex-direction: column; gap: 20px; }
+
+    .profile-photo-section {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .profile-photo-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .profile-photo-large {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-cursive);
+      font-size: 2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #7c3aed, #db2777);
+      color: #fff;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .profile-photo-large img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-photo-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .profile-photo-wrap:hover .profile-photo-overlay { opacity: 1; }
+
+    .profile-meta { flex: 1; }
+
+    .profile-meta .username {
+      font-family: var(--font-cursive);
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .profile-meta .email { font-size: 0.82rem; color: var(--text3); margin-bottom: 10px; }
+
+    .profile-photo-btn {
+      font-size: 0.78rem;
+      padding: 6px 14px;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text2);
+    }
+
+    .profile-photo-btn:hover { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+    .profile-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .profile-stat {
+      background: var(--bg3);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .profile-stat-value {
+      font-family: var(--font-cursive);
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .profile-stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text3);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .bio-section label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 6px;
+    }
+
+    .bio-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      resize: none;
+      outline: none;
+      transition: all 0.2s ease;
+      min-height: 68px;
+    }
+
+    .bio-input:focus {
+      border-color: var(--text);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+    }
+
+    [data-theme="dark"] .bio-input:focus {
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       MESSAGE IMPROVEMENTS
+    ═══════════════════════════════════════════════════════ */
+    .message-row.user .message-avatar {
+      background: linear-gradient(135deg, #7c3aed, #db2777);
+    }
+
+    .message-bubble { word-break: break-word; }
+
+    /* Sidebar avatar with photo support */
+    .profile-avatar img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    /* Input wrapper for emoji positioning */
+    .input-action-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Topbar model badge */
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text3);
+      margin-left: 8px;
+    }
+
+    .model-badge-dot {
+      width: 6px; height: 6px;
+      background: #7c3aed;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     SPLASH SCREEN
+════════════════════════════════════════════════════════ -->
+<div id="splashScreen">
+  <div class="splash-logo">
+    <div class="splash-logo-icon"><span class="rc-mark" style="font-size:2rem;">RC</span></div>
+    <span class="splash-logo-name"></span>
+  </div>
+  <p class="splash-tagline">AI Document Assistant.</p>
+  <div class="splash-loader">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     MAIN LAYOUT
+════════════════════════════════════════════════════════ -->
+<div class="chat-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon"><span class="rc-mark" style="font-size:1rem;">RC</span></div>
+        <span class="sidebar-logo-name"></span>
+      </div>
+      <button class="new-chat-btn" id="newChatBtn" title="New chat"><span>+</span></button>
+    </div>
+
+    <div class="sidebar-search">
+      <input type="text" id="searchInput" placeholder="Search chats…">
+    </div>
+
+    <div class="history-list" id="historyList">
+      <div style="padding:20px 8px; text-align:center; color:var(--text3); font-size:0.82rem;">
+        Loading chats…
+      </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="sidebar-profile" id="profileTrigger">
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <div class="profile-info">
+        <div class="profile-name"  id="profileName">Loading…</div>
+        <div class="profile-email" id="profileEmail"></div>
+      </div>
+      <span style="color:var(--text3); font-size:12px;">⋮</span>
+
+      <div class="profile-menu" id="profileMenu">
+        <div class="profile-menu-item" id="profileDetailsBtn">
+          <span>👤</span> Profile &amp; Settings
+        </div>
+        <div class="profile-menu-item" onclick="window.location.href='/reset-password'">
+          <span>🔑</span> Change password
+        </div>
+        <div class="profile-menu-item danger" id="logoutBtn">
+          <span>→</span> Sign out
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Chat Main ─────────────────────────────────────────────────────── -->
+  <div class="chat-main">
+    <!-- Topbar -->
+    <div class="chat-topbar">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="topbar-btn" id="sidebarToggle" title="Toggle sidebar" style="display:none;">☰</button>
+        <span class="chat-topbar-title" id="topbarTitle">RAGChat</span>
+        <span class="model-badge"><span class="model-badge-dot"></span>Gemini 2.5</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="topbar-btn" id="uploadTopBtn" title="Upload PDF">📎</button>
+        <button class="topbar-btn theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages-container" id="messagesContainer">
+      <div class="messages-inner" id="messagesInner">
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-logo" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;font-size:2.2rem;letter-spacing:-0.04em;">RC</div>
+          <h2>What can I help with?</h2>
+          <p>Ask anything, upload a PDF, or pick a suggestion below to get started.</p>
+          <div class="prompt-suggestions">
+            <div class="prompt-card" onclick="fillPrompt('Summarise the key points of my document')">
+              <span class="prompt-card-icon">📋</span>
+              <span class="prompt-card-text">Summarise my document</span>
+              <span class="prompt-card-sub">Get a quick overview</span>
+            </div>
+            <div class="prompt-card" onclick="fillPrompt('What are the main conclusions in this PDF?')">
+              <span class="prompt-card-icon">🔍</span>
+              <span class="prompt-card-text">Find conclusions</span>
+              <span class="prompt-card-sub">Extract key findings</span>
+            </div>
+            <div class="prompt-card" onclick="fillPrompt('List all the important dates mentioned in this document')">
+              <span class="prompt-card-icon">📅</span>
+              <span class="prompt-card-text">List key dates</span>
+              <span class="prompt-card-sub">Timeline extraction</span>
+            </div>
+            <div class="prompt-card" onclick="fillPrompt('Explain this document in simple terms for a beginner')">
+              <span class="prompt-card-icon">💡</span>
+              <span class="prompt-card-text">Simplify for me</span>
+              <span class="prompt-card-sub">Easy-to-read summary</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="chat-input-area" id="chatInputArea">
+      <!-- PDF badge (when doc loaded) -->
+      <div id="pdfBadgeArea"></div>
+
+      <!-- Upload drop area -->
+      <div class="upload-area" id="uploadArea">
+        <div style="font-size:32px;">📄</div>
+        <h3>Drop PDF here</h3>
+        <p>or click to browse</p>
+        <input type="file" id="fileInput" accept=".pdf" style="display:none;">
+        <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Browse file</button>
+      </div>
+
+      <!-- Chat input box -->
+      <div class="input-box" id="inputBox">
+        <textarea id="messageInput" placeholder="Message RAGChat…" rows="1"></textarea>
+        <div class="input-actions">
+          <!-- Emoji trigger -->
+          <div class="input-action-wrapper emoji-trigger-wrapper">
+            <button class="input-action-btn" id="emojiBtn" title="Emoji"><span>😊</span></button>
+            <!-- Emoji Picker Panel -->
+            <div class="emoji-picker" id="emojiPicker">
+              <div class="emoji-cats" id="emojiCats"></div>
+              <div class="emoji-search"><input type="text" id="emojiSearch" placeholder="Search emoji…"></div>
+              <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+          </div>
+          <button class="input-action-btn" id="uploadBtn" title="Upload PDF"><span>📎</span></button>
+          <button class="send-btn" id="sendBtn" title="Send (Enter)">↑</button>
+        </div>
+      </div>
+      <div class="input-hint">Enter to send · Shift+Enter new line · 😊 for emoji</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     PROFILE MODAL — Advanced
+════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal" style="width:460px;">
+    <div class="profile-modal-body">
+
+      <!-- Photo + name row -->
+      <div class="profile-photo-section">
+        <div class="profile-photo-wrap">
+          <div class="profile-photo-large" id="modalPhotoDisplay">T</div>
+          <div class="profile-photo-overlay" onclick="document.getElementById('photoFileInput').click()">📷</div>
+          <input type="file" id="photoFileInput" accept="image/*" style="display:none;">
+        </div>
+        <div class="profile-meta">
+          <div class="username" id="modalUsername"></div>
+          <div class="email"    id="modalEmail"></div>
+          <button class="profile-photo-btn" onclick="document.getElementById('photoFileInput').click()">
+            📷 Change photo
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <div class="profile-stat-value" id="modalChatCount">—</div>
+          <div class="profile-stat-label">Chats</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-value" id="modalJoined">—</div>
+          <div class="profile-stat-label">Joined</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-value">✓</div>
+          <div class="profile-stat-label">Active</div>
+        </div>
+      </div>
+
+      <!-- Bio -->
+      <div class="bio-section">
+        <label for="bioInput">Bio</label>
+        <textarea class="bio-input" id="bioInput" placeholder="Write a short bio about yourself…" maxlength="200"></textarea>
+      </div>
+
+    </div>
+
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="btn btn-secondary" onclick="closeModal('profileModal')">Close</button>
+      <button class="btn btn-ghost"     onclick="window.location.href='/reset-password'">Change password</button>
+      <button class="btn btn-primary"   id="saveProfileBtn" style="width:auto;">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rename Modal ───────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="renameModal">
+  <div class="modal">
+    <h3>Rename chat</h3>
+    <p>Enter a new name for this conversation.</p>
+    <input type="text" class="form-input" id="renameInput" placeholder="Chat name" style="margin-bottom:20px;">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('renameModal')">Cancel</button>
+      <button class="btn btn-primary"   id="renameConfirmBtn" style="width:auto;">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Modal ───────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete chat?</h3>
+    <p>This will permanently delete this conversation and all its messages. This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger"    id="deleteConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCRIPT
+════════════════════════════════════════════════════════ -->
+<script>
+/* ── Splash screen ──────────────────────────────────────────────────────────── */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const splash = document.getElementById('splashScreen');
+    splash.classList.add('hiding');
+    setTimeout(() => splash.remove(), 750);
+  }, 2400);
+});
+
+/* ── Theme ──────────────────────────────────────────────────────────────────── */
+const savedTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+const themeToggle = document.getElementById('themeToggle');
+themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+});
+
+/* ── State ──────────────────────────────────────────────────────────────────── */
+let currentConvUid  = null;
+let allConversations = [];
+let currentUser      = null;
+let pendingRenameUid = null;
+let pendingDeleteUid = null;
+let isLoading        = false;
+
+/* ── Utilities ──────────────────────────────────────────────────────────────── */
+function toast(msg, duration = 2800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Init ───────────────────────────────────────────────────────────────────── */
+async function init() {
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) { window.location.href = '/login'; return; }
+    currentUser = await res.json();
+
+    // Apply saved profile photo / bio from localStorage
+    const savedPhoto = localStorage.getItem('profilePhoto_' + currentUser.id);
+    const savedBio   = localStorage.getItem('profileBio_'   + currentUser.id);
+
+    // Sidebar avatar
+    const avatarEl = document.getElementById('profileAvatar');
+    if (savedPhoto) {
+      avatarEl.innerHTML = `<img src="${savedPhoto}" alt="avatar">`;
+    } else {
+      avatarEl.textContent = currentUser.username[0].toUpperCase();
+    }
+
+    document.getElementById('profileName').textContent  = currentUser.username;
+    document.getElementById('profileEmail').textContent = currentUser.email;
+  } catch (e) { window.location.href = '/login'; return; }
+
+  await loadConversations();
+}
+
+/* ── Conversations ──────────────────────────────────────────────────────────── */
+async function loadConversations() {
+  try {
+    const res = await fetch('/api/conversations');
+    allConversations = await res.json();
+    renderHistory(allConversations);
+  } catch (e) { console.error(e); }
+}
+
+function renderHistory(convs) {
+  const list = document.getElementById('historyList');
+  if (!convs.length) {
+    list.innerHTML = `<div style="padding:20px 8px;text-align:center;color:var(--text3);font-size:0.82rem;">
+      No chats yet — just start typing! 💬
+    </div>`;
+    return;
+  }
+
+  const now    = new Date();
+  const groups = { Today: [], 'This week': [], Older: [] };
+  convs.forEach(c => {
+    const diffDays = Math.floor((now - new Date(c.updated_at)) / 86400000);
+    if (diffDays < 1)      groups['Today'].push(c);
+    else if (diffDays < 7) groups['This week'].push(c);
+    else                   groups['Older'].push(c);
+  });
+
+  let html = '';
+  for (const [label, items] of Object.entries(groups)) {
+    if (!items.length) continue;
+    html += `<div class="history-section-label">${label}</div>`;
+    items.forEach(c => {
+      const isActive = c.uid === currentConvUid;
+      html += `
+        <div class="history-item ${isActive ? 'active' : ''}" data-uid="${c.uid}" id="hi-${c.uid}">
+          <span class="history-item-icon">${c.has_pdf ? '📄' : '💬'}</span>
+          <span class="history-item-title" id="ht-${c.uid}">${escapeHtml(c.title)}</span>
+          <div class="history-item-actions">
+            <button class="history-action-btn rename-btn" title="Rename" onclick="startRename('${c.uid}',event)">✏</button>
+            <button class="history-action-btn del"        title="Delete" onclick="startDelete('${c.uid}',event)">✕</button>
+          </div>
+        </div>`;
+    });
+  }
+
+  list.innerHTML = html;
+  list.querySelectorAll('.history-item').forEach(item => {
+    item.addEventListener('click', e => {
+      if (e.target.closest('.history-action-btn')) return;
+      loadConversation(item.dataset.uid);
+    });
+  });
+}
+
+/* ── Load Conversation ──────────────────────────────────────────────────────── */
+async function loadConversation(uid) {
+  currentConvUid = uid;
+  document.querySelectorAll('.history-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.uid === uid)
+  );
+
+  try {
+    const res  = await fetch(`/api/conversations/${uid}`);
+    const conv = await res.json();
+    document.getElementById('topbarTitle').textContent = conv.title;
+
+    const inner = document.getElementById('messagesInner');
+    document.getElementById('welcomeScreen')?.remove();
+
+    const existing = inner.querySelector('.messages-list');
+    if (existing) existing.remove();
+
+    const msgList = document.createElement('div');
+    msgList.className = 'messages-list';
+
+    if (conv.messages.length === 0) {
+      msgList.innerHTML = buildWelcomeHTML(conv);
+    } else {
+      conv.messages.forEach(m => appendMessageEl(msgList, m.role, m.content));
+    }
+
+    inner.appendChild(msgList);
+    scrollBottom();
+    updatePdfBadge(conv.has_pdf, conv.pdf_filename);
+  } catch (e) { console.error(e); }
+}
+
+function buildWelcomeHTML(conv) {
+  const rcMark = `<div class="welcome-logo" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;font-size:2.2rem;letter-spacing:-0.04em;">RC</div>`;
+  if (conv.has_pdf) {
+    return `<div class="welcome-screen">
+      ${rcMark}
+      <h2>${escapeHtml(conv.pdf_filename || 'Document loaded')}</h2>
+      <p>Your PDF is ready. Ask anything about it below.</p>
+    </div>`;
+  }
+  return `<div class="welcome-screen">
+    ${rcMark}
+    <h2>New conversation</h2>
+    <p>Upload a PDF or just start chatting.</p>
+  </div>`;
+}
+
+function updatePdfBadge(hasPdf, filename) {
+  const area = document.getElementById('pdfBadgeArea');
+  area.innerHTML = hasPdf && filename
+    ? `<div class="pdf-badge">
+        <span>📄</span>
+        <span class="pdf-name">${escapeHtml(filename)}</span>
+        <span style="color:var(--text3);margin-left:4px;" title="Replace" onclick="triggerUpload()">↑</span>
+       </div>`
+    : '';
+}
+
+/* ── Prompt suggestions (fill input) ───────────────────────────────────────── */
+function fillPrompt(text) {
+  const inp = document.getElementById('messageInput');
+  inp.value = text;
+  inp.focus();
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+}
+
+/* ── New Chat ───────────────────────────────────────────────────────────────── */
+async function newChat() {
+  try {
+    const res  = await fetch('/api/conversations', { method: 'POST' });
+    const conv = await res.json();
+    await loadConversations();
+    loadConversation(conv.uid);
+  } catch (e) { toast('Failed to create chat'); }
+}
+
+document.getElementById('newChatBtn').addEventListener('click', newChat);
+
+/* ── Messages ───────────────────────────────────────────────────────────────── */
+function appendMessageEl(container, role, content) {
+  const row = document.createElement('div');
+  row.className = `message-row ${role}`;
+
+  // Avatar: use saved photo for user if available
+  let avatarHTML;
+  if (role === 'user') {
+    const savedPhoto = currentUser ? localStorage.getItem('profilePhoto_' + currentUser.id) : null;
+    if (savedPhoto) {
+      avatarHTML = `<img src="${savedPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else {
+      avatarHTML = currentUser ? currentUser.username[0].toUpperCase() : 'U';
+    }
+  } else {
+    avatarHTML = '✦';
+  }
+
+  const parsedContent = role === 'assistant'
+    ? marked.parse(content)
+    : `<p>${escapeHtml(content).replace(/\n/g,'<br>')}</p>`;
+
+  row.innerHTML = `
+    <div class="message-avatar">${avatarHTML}</div>
+    <div class="message-bubble">${parsedContent}</div>`;
+  container.appendChild(row);
+  return row;
+}
+
+function scrollBottom() {
+  const c = document.getElementById('messagesContainer');
+  setTimeout(() => c.scrollTop = c.scrollHeight, 50);
+}
+
+function showTyping() {
+  const inner  = document.getElementById('messagesInner');
+  const list   = inner.querySelector('.messages-list');
+  const target = list || inner;
+  const typing = document.createElement('div');
+  typing.className = 'typing-indicator';
+  typing.id = 'typingIndicator';
+  typing.innerHTML = `
+    <div class="message-avatar" style="background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;">✦</div>
+    <div class="typing-dots">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>`;
+  target.appendChild(typing);
+  scrollBottom();
+}
+
+function hideTyping() { document.getElementById('typingIndicator')?.remove(); }
+
+/* ── Send Message — AUTO-CREATES CHAT if none selected ─────────────────────── */
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('messageInput');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  // AUTO-CREATE CHAT if none selected
+  if (!currentConvUid) {
+    try {
+      const res  = await fetch('/api/conversations', { method: 'POST' });
+      const conv = await res.json();
+      currentConvUid = conv.uid;
+      await loadConversations();
+      // Render empty chat view
+      const inner = document.getElementById('messagesInner');
+      document.getElementById('welcomeScreen')?.remove();
+      inner.querySelectorAll('.messages-list').forEach(el => el.remove());
+      const ml = document.createElement('div');
+      ml.className = 'messages-list';
+      inner.appendChild(ml);
+    } catch (e) {
+      toast('Could not create chat. Try again.');
+      return;
+    }
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  const inner = document.getElementById('messagesInner');
+  let list = inner.querySelector('.messages-list');
+  if (!list) {
+    inner.innerHTML = '';
+    list = document.createElement('div');
+    list.className = 'messages-list';
+    inner.appendChild(list);
+  }
+  list.querySelector('.welcome-screen')?.remove();
+
+  appendMessageEl(list, 'user', text);
+  scrollBottom();
+  showTyping();
+
+  try {
+    const res  = await fetch(`/api/conversations/${currentConvUid}/chat`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ message: text })
+    });
+    const data = await res.json();
+    hideTyping();
+
+    if (data.reply) {
+      appendMessageEl(list, 'assistant', data.reply);
+      scrollBottom();
+      await loadConversations();
+      const conv = allConversations.find(c => c.uid === currentConvUid);
+      if (conv) document.getElementById('topbarTitle').textContent = conv.title;
+    } else {
+      toast(data.error || 'Failed to get reply');
+    }
+  } catch (e) {
+    hideTyping();
+    toast('Error sending message');
+  } finally {
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+  }
+}
+
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('messageInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+document.getElementById('messageInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+});
+
+/* ── PDF Upload ─────────────────────────────────────────────────────────────── */
+function triggerUpload() {
+  if (!currentConvUid) {
+    newChat().then(() => document.getElementById('fileInput').click());
+    return;
+  }
+  document.getElementById('fileInput').click();
+}
+
+document.getElementById('uploadBtn').addEventListener('click', triggerUpload);
+document.getElementById('uploadTopBtn').addEventListener('click', triggerUpload);
+
+document.getElementById('fileInput').addEventListener('change', async function() {
+  const file = this.files[0];
+  if (!file) return;
+  await uploadFile(file);
+  this.value = '';
+});
+
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('click', () => document.getElementById('fileInput').click());
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = 'var(--text)'; });
+uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = ''; });
+uploadArea.addEventListener('drop', async e => {
+  e.preventDefault();
+  uploadArea.style.borderColor = '';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') await uploadFile(file);
+  else toast('Please drop a PDF file');
+});
+
+async function uploadFile(file) {
+  if (!currentConvUid) { await newChat(); }
+  if (!currentConvUid) { toast('Failed to create chat'); return; }
+  const form = new FormData();
+  form.append('file', file);
+  toast('Uploading and processing PDF…', 5000);
+  try {
+    const res  = await fetch(`/api/conversations/${currentConvUid}/upload`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (data.success) {
+      toast(`✅ PDF loaded — ${data.chunks} chunks ready`);
+      updatePdfBadge(true, data.filename);
+      await loadConversations();
+      const conv = allConversations.find(c => c.uid === currentConvUid);
+      if (conv) document.getElementById('topbarTitle').textContent = conv.title;
+    } else { toast(data.error || 'Upload failed'); }
+  } catch (e) { toast('Upload error'); }
+}
+
+/* ── Rename ─────────────────────────────────────────────────────────────────── */
+function startRename(uid, e) {
+  e.stopPropagation();
+  pendingRenameUid = uid;
+  const conv = allConversations.find(c => c.uid === uid);
+  document.getElementById('renameInput').value = conv ? conv.title : '';
+  openModal('renameModal');
+  setTimeout(() => document.getElementById('renameInput').focus(), 100);
+}
+
+document.getElementById('renameConfirmBtn').addEventListener('click', async () => {
+  const newTitle = document.getElementById('renameInput').value.trim();
+  if (!newTitle || !pendingRenameUid) return;
+  try {
+    await fetch(`/api/conversations/${pendingRenameUid}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ title: newTitle })
+    });
+    closeModal('renameModal');
+    await loadConversations();
+    if (pendingRenameUid === currentConvUid)
+      document.getElementById('topbarTitle').textContent = newTitle;
+    toast('Chat renamed ✓');
+  } catch (e) { toast('Rename failed'); }
+});
+
+document.getElementById('renameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('renameConfirmBtn').click();
+});
+
+/* ── Delete ─────────────────────────────────────────────────────────────────── */
+function startDelete(uid, e) {
+  e.stopPropagation();
+  pendingDeleteUid = uid;
+  openModal('deleteModal');
+}
+
+document.getElementById('deleteConfirmBtn').addEventListener('click', async () => {
+  if (!pendingDeleteUid) return;
+  try {
+    await fetch(`/api/conversations/${pendingDeleteUid}`, { method: 'DELETE' });
+    closeModal('deleteModal');
+    if (pendingDeleteUid === currentConvUid) {
+      currentConvUid = null;
+      document.getElementById('messagesInner').innerHTML = `
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-logo" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;font-size:2.2rem;letter-spacing:-0.04em;">RC</div>
+          <h2>What can I help with?</h2>
+          <p>Ask anything, upload a PDF, or pick a suggestion below.</p>
+          <div class="prompt-suggestions">
+            <div class="prompt-card" onclick="fillPrompt('Summarise the key points of my document')">
+              <span class="prompt-card-icon">📋</span>
+              <span class="prompt-card-text">Summarise my document</span>
+              <span class="prompt-card-sub">Get a quick overview</span>
+            </div>
+            <div class="prompt-card" onclick="fillPrompt('What are the main conclusions in this PDF?')">
+              <span class="prompt-card-icon">🔍</span>
+              <span class="prompt-card-text">Find conclusions</span>
+              <span class="prompt-card-sub">Extract key findings</span>
+            </div>
+            <div class="prompt-card" onclick="fillPrompt('List all the important dates mentioned in this document')">
+              <span class="prompt-card-icon">📅</span>
+              <span class="prompt-card-text">List key dates</span>
+              <span class="prompt-card-sub">Timeline extraction</span>
+            </div>
+            <div class="prompt-card" onclick="fillPrompt('Explain this document in simple terms for a beginner')">
+              <span class="prompt-card-icon">💡</span>
+              <span class="prompt-card-text">Simplify for me</span>
+              <span class="prompt-card-sub">Easy-to-read summary</span>
+            </div>
+          </div>
+        </div>`;
+      document.getElementById('topbarTitle').textContent = 'RAGChat';
+      document.getElementById('pdfBadgeArea').innerHTML  = '';
+    }
+    await loadConversations();
+    toast('Chat deleted');
+  } catch (e) { toast('Delete failed'); }
+});
+
+/* ── Profile ─────────────────────────────────────────────────────────────────── */
+document.getElementById('profileTrigger').addEventListener('click', e => {
+  if (e.target.closest('.profile-menu-item')) return;
+  document.getElementById('profileMenu').classList.toggle('open');
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.sidebar-profile'))
+    document.getElementById('profileMenu').classList.remove('open');
+});
+
+document.getElementById('profileDetailsBtn').addEventListener('click', () => {
+  document.getElementById('profileMenu').classList.remove('open');
+  if (!currentUser) return;
+
+  // Fill modal
+  const savedPhoto = localStorage.getItem('profilePhoto_' + currentUser.id);
+  const savedBio   = localStorage.getItem('profileBio_'   + currentUser.id);
+  const photoEl    = document.getElementById('modalPhotoDisplay');
+
+  if (savedPhoto) {
+    photoEl.innerHTML = `<img src="${savedPhoto}" alt="avatar">`;
+  } else {
+    photoEl.textContent = currentUser.username[0].toUpperCase();
+  }
+
+  document.getElementById('modalUsername').textContent = currentUser.username;
+  document.getElementById('modalEmail').textContent    = currentUser.email;
+  document.getElementById('modalJoined').textContent   = new Date(currentUser.created_at)
+    .toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  document.getElementById('modalChatCount').textContent = allConversations.length;
+  document.getElementById('bioInput').value = savedBio || '';
+
+  openModal('profileModal');
+});
+
+// Photo upload
+document.getElementById('photoFileInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    // Update modal preview
+    document.getElementById('modalPhotoDisplay').innerHTML = `<img src="${dataUrl}" alt="avatar">`;
+    // Update sidebar avatar
+    const avatarEl = document.getElementById('profileAvatar');
+    avatarEl.innerHTML = `<img src="${dataUrl}" alt="avatar">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Save profile
+document.getElementById('saveProfileBtn').addEventListener('click', () => {
+  if (!currentUser) return;
+  const bio = document.getElementById('bioInput').value.trim();
+
+  // Save bio
+  localStorage.setItem('profileBio_' + currentUser.id, bio);
+
+  // Save photo if newly selected
+  const photoFile = document.getElementById('photoFileInput').files[0];
+  if (photoFile) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      localStorage.setItem('profilePhoto_' + currentUser.id, e.target.result);
+      toast('Profile saved ✓');
+    };
+    reader.readAsDataURL(photoFile);
+  } else {
+    toast('Profile saved ✓');
+  }
+
+  closeModal('profileModal');
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+});
+
+/* ── Search ─────────────────────────────────────────────────────────────────── */
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q        = this.value.toLowerCase();
+  const filtered = q ? allConversations.filter(c => c.title.toLowerCase().includes(q)) : allConversations;
+  renderHistory(filtered);
+});
+
+/* ── Modal backdrop ─────────────────────────────────────────────────────────── */
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+/* ── Sidebar toggle ─────────────────────────────────────────────────────────── */
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+if (window.innerWidth < 680) {
+  document.getElementById('sidebarToggle').style.display = 'flex';
+}
+
+/* ════════════════════════════════════════════════════════
+   EMOJI PICKER
+════════════════════════════════════════════════════════ */
+const EMOJI_DATA = {
+  '😊 Smileys': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','😶‍🌫️','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'],
+  '👍 Gestures': ['👍','👎','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👏','🙌','🫶','🤲','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👁️','👀','👄','🫦','🦶'],
+  '❤️ Hearts': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🔯','☯️','♾️','🌈'],
+  '🎉 Objects': ['🎉','🎊','🎈','🎁','🎀','🎂','🍰','🥂','🍾','🎆','🎇','✨','⭐','🌟','💫','⚡','🔥','🌊','💎','👑','🏆','🥇','🎯','🎮','🎲','🎭','🎨','🖌️','🎵','🎶','🎤','🎧','📱','💻','🖥️','⌨️','🖨️','🖱️','💡','🔦','🕯️','📚','📖','📝','✏️','🖊️','📌','📍','🗂️','📂','📁'],
+  '🌍 Nature': ['🌍','🌎','🌏','🌐','🗺️','🧭','🌋','🏔️','⛰️','🌁','🌃','🌄','🌅','🌆','🌇','🌉','🌌','🌠','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','⭐','🌟','💫','✨','☁️','⛅','🌤️','🌈','☀️','🌦️','🌧️','⛈️','🌩️','🌪️','🌫️','🌬️','🌀','🌈'],
+  '🍕 Food': ['🍕','🍔','🌮','🌯','🥙','🧆','🥚','🍳','🥘','🍲','🥗','🫕','🥫','🫙','🧂','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🌭','🍟','🫔','🥪','🥨','🧀','🍇','🍈','🍉','🍊','🍋','🍌','🍍','🥭','🍎','🍏','🍐','🍑','🍒','🍓','🫐','🍄','🫒','🥥','🥝'],
+};
+
+let currentEmojiCategory = Object.keys(EMOJI_DATA)[0];
+
+function buildEmojiPicker() {
+  const catsEl = document.getElementById('emojiCats');
+  const gridEl = document.getElementById('emojiGrid');
+
+  // Build category buttons
+  catsEl.innerHTML = Object.keys(EMOJI_DATA).map(cat => {
+    const icon = cat.split(' ')[0];
+    return `<button class="emoji-cat-btn${cat === currentEmojiCategory ? ' active' : ''}" title="${cat}" data-cat="${cat}">${icon}</button>`;
+  }).join('');
+
+  catsEl.querySelectorAll('.emoji-cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentEmojiCategory = btn.dataset.cat;
+      catsEl.querySelectorAll('.emoji-cat-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderEmojiGrid(EMOJI_DATA[currentEmojiCategory]);
+      document.getElementById('emojiSearch').value = '';
+    });
+  });
+
+  renderEmojiGrid(EMOJI_DATA[currentEmojiCategory]);
+}
+
+function renderEmojiGrid(emojis) {
+  const gridEl = document.getElementById('emojiGrid');
+  gridEl.innerHTML = emojis.map(em =>
+    `<button class="emoji-btn" title="${em}">${em}</button>`
+  ).join('');
+
+  gridEl.querySelectorAll('.emoji-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      insertEmoji(btn.textContent);
+    });
+  });
+}
+
+function insertEmoji(em) {
+  const inp = document.getElementById('messageInput');
+  const start = inp.selectionStart;
+  const end   = inp.selectionEnd;
+  inp.value   = inp.value.slice(0, start) + em + inp.value.slice(end);
+  inp.selectionStart = inp.selectionEnd = start + em.length;
+  inp.focus();
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+  // Keep picker open for multiple emojis
+}
+
+// Search emoji
+document.getElementById('emojiSearch').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  if (!q) {
+    renderEmojiGrid(EMOJI_DATA[currentEmojiCategory]);
+    return;
+  }
+  const all = Object.values(EMOJI_DATA).flat();
+  renderEmojiGrid(all.filter(em => em.includes(q)).slice(0, 48));
+});
+
+// Toggle picker
+document.getElementById('emojiBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const picker = document.getElementById('emojiPicker');
+  const isOpen = picker.classList.toggle('open');
+  if (isOpen) buildEmojiPicker();
+});
+
+// Close picker on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.emoji-trigger-wrapper')) {
+    document.getElementById('emojiPicker').classList.remove('open');
+  }
+});
+
+/* ── Start ───────────────────────────────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>

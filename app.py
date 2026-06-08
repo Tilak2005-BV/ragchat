@@ -114,6 +114,8 @@ def chunk_text(text, chunk_size=800, overlap=100):
     return chunks
 
 import requests
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 def send_email_message(subject, recipients, html_body, reply_to=None):
     """
@@ -146,21 +148,19 @@ def send_email_message(subject, recipients, html_body, reply_to=None):
     # 2. Try SendGrid API
     sendgrid_key = os.environ.get('SENDGRID_API_KEY')
     if sendgrid_key:
-        headers = {
-            'Authorization': f'Bearer {sendgrid_key}',
-            'Content-Type': 'application/json'
-        }
-        data = {
-            "personalizations": [{"to": [{"email": r} for r in recipients]}],
-            "from": {"email": sender_email},
-            "subject": subject,
-            "content": [{"type": "text/html", "value": html_body}]
-        }
+        message = Mail(
+            from_email=sender_email,
+            to_emails=recipients,
+            subject=subject,
+            html_content=html_body
+        )
         if reply_to:
-            data["reply_to"] = {"email": reply_to}
-        res = requests.post('https://api.sendgrid.com/v3/mail/send', json=data, headers=headers)
-        if res.status_code >= 400:
-            raise Exception(f"SendGrid API Error: {res.text}")
+            message.reply_to = reply_to
+        try:
+            sg = SendGridAPIClient(sendgrid_key)
+            sg.send(message)
+        except Exception as e:
+            raise Exception(f"SendGrid Error: {e}")
         return
         
     # 3. Try Mailtrap API

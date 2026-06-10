@@ -621,7 +621,7 @@ input, textarea { font-family: inherit; }
   50%       { border-color: var(--text3); }
 }
 
-.sidebar.collapsed { width: 0; overflow: hidden; padding: 0; }
+
 
 @media (max-width: 768px) {
   .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000; }

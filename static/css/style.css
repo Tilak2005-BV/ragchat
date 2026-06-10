@@ -371,7 +371,12 @@ input, textarea { font-family: inherit; }
   display: flex;
   flex-direction: column;
   height: 100vh;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, margin-left 0.3s ease;
+}
+
+.sidebar.collapsed {
+  margin-left: -268px;
+  visibility: hidden;
 }
 
 .sidebar-header {
@@ -521,12 +526,19 @@ input, textarea { font-family: inherit; }
 
 /* ── History Action Buttons (Rename & Delete) ─────────────────────────────── */
 .history-item-actions {
-  display: none;
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
   gap: 3px;
   flex-shrink: 0;
+  transition: opacity 0.2s ease;
 }
 
-.history-item:hover .history-item-actions { display: flex; }
+.history-item:hover .history-item-actions,
+.history-item.active .history-item-actions { 
+  opacity: 1; 
+  pointer-events: auto; 
+}
 
 .history-action-btn {
   width: 26px; height: 26px;
@@ -607,6 +619,13 @@ input, textarea { font-family: inherit; }
 @keyframes cursorPulse {
   0%, 100% { border-color: var(--text); }
   50%       { border-color: var(--text3); }
+}
+
+.sidebar.collapsed { width: 0; overflow: hidden; padding: 0; }
+
+@media (max-width: 768px) {
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 1000; }
+  .sidebar.collapsed { display: none; }
 }
 
 /* Sidebar profile */
@@ -1258,7 +1277,7 @@ input, textarea { font-family: inherit; }
 .reset-card .desc { font-size: 0.85rem; color: var(--text3); margin-bottom: 32px; }
 
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
-@media (max-width: 680px) {
+@media (max-width: 768px) {
   .auth-grid { grid-template-columns: 1fr; width: 95vw; }
   .auth-brand { display: none; }
   .auth-form-side { padding: 40px 28px; }
@@ -1267,6 +1286,8 @@ input, textarea { font-family: inherit; }
     position: fixed; 
     z-index: 999; 
     transform: translateX(-100%); 
+    margin-left: 0 !important;
+    visibility: visible !important;
     width: 85vw; 
     max-width: 320px; 
     height: 100vh;
@@ -1274,6 +1295,8 @@ input, textarea { font-family: inherit; }
   }
   .sidebar.open { transform: translateX(0); }
   #closeSidebarBtn { display: block !important; }
+  
+  .history-item-actions { opacity: 1; pointer-events: auto; }
   
   .messages-inner { padding: 0 14px; }
 }

@@ -492,7 +492,7 @@
     </div>
 
     <!-- Profile -->
-    <div class="sidebar-profile" id="profileTrigger">
+    <div class="sidebar-profile" id="profileTrigger" style="margin-bottom: 20px;">
       <div class="profile-avatar" id="profileAvatar">?</div>
       <div class="profile-info">
         <div class="profile-name"  id="profileName">Loading…</div>
@@ -519,7 +519,7 @@
     <!-- Topbar -->
     <div class="chat-topbar">
       <div style="display:flex; align-items:center; gap:10px;">
-        <button class="topbar-btn" id="sidebarToggle" title="Toggle sidebar" style="display:none;">☰</button>
+        <button class="topbar-btn" id="sidebarToggle" title="Toggle sidebar">☰</button>
         <span class="chat-topbar-title" id="topbarTitle">RAGChat</span>
         <span class="model-badge"><span class="model-badge-dot"></span>Gemini 2.5</span>
       </div>
@@ -993,31 +993,73 @@ async function sendMessage() {
   scrollBottom();
   showTyping();
 
+let isRateLimited = false;
+
+function handleRateLimitError() {
+  isRateLimited = true;
+  const input = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+  input.disabled = true;
+  sendBtn.disabled = true;
+  input.placeholder = "Quota exceeded. Try again in 60s...";
+  
+  toast('Quota exceeded. Chat disabled for 1 minute.');
+  let timeLeft = 60;
+  
+  const interval = setInterval(() => {
+    timeLeft--;
+    input.placeholder = `Quota exceeded. Try again in ${timeLeft}s...`;
+    if (timeLeft <= 0) {
+      clearInterval(interval);
+      isRateLimited = false;
+      input.disabled = false;
+      sendBtn.disabled = false;
+      input.placeholder = "Message RAGChat...";
+      input.focus();
+      isLoading = false;
+    }
+  }, 1000);
+}
+
   try {
     const res  = await fetch(`/api/conversations/${currentConvUid}/chat`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ message: text })
     });
-    const data = await res.json();
+    
+    let data;
+    try {
+      data = await res.json();
+    } catch(err) {
+      data = { error: 'Invalid server response. Check your network connection.' };
+    }
+    
     hideTyping();
 
-    if (data.reply) {
+    if (res.ok && data.reply) {
       appendMessageEl(list, 'assistant', data.reply);
       scrollBottom();
       await loadConversations();
       const conv = allConversations.find(c => c.uid === currentConvUid);
       if (conv) document.getElementById('topbarTitle').textContent = conv.title;
     } else {
-      toast(data.error || 'Failed to get reply');
+      const errorMsg = data.error || '';
+      if (res.status === 429 || errorMsg.toLowerCase().includes('quota')) {
+        handleRateLimitError();
+      } else {
+        toast(errorMsg || 'Check your network connection and try again.');
+      }
     }
   } catch (e) {
     hideTyping();
-    toast('Error sending message');
+    toast('Network connection error. Please fix your connection.');
   } finally {
-    isLoading = false;
-    document.getElementById('sendBtn').disabled = false;
-    input.focus();
+    if (!isRateLimited) {
+      isLoading = false;
+      document.getElementById('sendBtn').disabled = false;
+      input.focus();
+    }
   }
 }
 
@@ -1259,7 +1301,12 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 
 /* ── Sidebar toggle ─────────────────────────────────────────────────────────── */
 document.getElementById('sidebarToggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.add('open');
+  const sidebar = document.getElementById('sidebar');
+  if (window.innerWidth <= 768) {
+    sidebar.classList.add('open');
+  } else {
+    sidebar.classList.toggle('collapsed');
+  }
 });
 document.getElementById('closeSidebarBtn').addEventListener('click', () => {
   document.getElementById('sidebar').classList.remove('open');

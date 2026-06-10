@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAGChat — Chat with your PDFs</title>
+  <meta name="description" content="Upload any PDF and get instant AI-powered answers. Built with Gemini AI and RAG retrieval.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <style>
+    /* ═══════════════════════════════════════════════════════
+       INDEX PAGE — FULL REDESIGN
+    ═══════════════════════════════════════════════════════ */
+
+    html, body { scroll-behavior: smooth; }
+
+    .index-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+    }
+
+    /* ── Asteroid Canvas ── */
+    #asteroidCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.55;
+      transition: opacity 0.4s ease;
+    }
+
+    [data-theme="dark"] #asteroidCanvas { opacity: 0.75; }
+
+    /* ── Navbar ── */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 52px;
+      height: 64px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.80);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    [data-theme="dark"] .nav {
+      background: rgba(23,23,23,0.85);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-cursive);
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .nav-logo-icon {
+      background: none;
+      border-radius: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-style: italic;
+      font-weight: 700;
+      font-size: 1.5rem;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Theme pill toggle in nav */
+    .theme-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .theme-pill:hover {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .nav-link {
+      font-size: 0.87rem;
+      font-weight: 500;
+      color: var(--text2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      transition: all 0.2s ease;
+      border: 1.5px solid transparent;
+    }
+
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--bg3);
+    }
+
+    .nav-btn {
+      font-family: var(--font-cursive);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--bg);
+      background: var(--text);
+      padding: 8px 22px;
+      border-radius: 20px;
+      transition: all 0.2s ease;
+      border: 2px solid var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .nav-btn:hover {
+      opacity: 0.82;
+      transform: translateY(-1px);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 24px 80px;
+      text-align: center;
+      min-height: 88vh;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 36px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      animation: heroFade 0.7s ease both;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-badge-dot {
+      width: 7px; height: 7px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    .hero h1 {
+      font-family: var(--font-cursive);
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.08;
+      margin-bottom: 24px;
+      max-width: 780px;
+      animation: heroFade 0.7s ease 0.1s both;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      opacity: 0.65;
+    }
+
+    .hero-sub {
+      font-size: 1.05rem;
+      color: var(--text2);
+      max-width: 520px;
+      line-height: 1.8;
+      margin-bottom: 52px;
+      animation: heroFade 0.7s ease 0.2s both;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      animation: heroFade 0.7s ease 0.3s both;
+    }
+
+    @keyframes heroFade {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* CTA Buttons with radius hover */
+    .cta-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 15px 36px;
+      background: var(--text);
+      color: var(--bg);
+      border-radius: 30px;
+      font-family: var(--font-cursive);
+      font-size: 1.05rem;
+      font-weight: 600;
+      transition: all 0.25s ease;
+      border: 2px solid var(--text);
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.1);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .cta-primary:hover::after { transform: scaleX(1); }
+    .cta-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.2); }
+
+    .cta-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 15px 30px;
+      background: transparent;
+      color: var(--text);
+      border-radius: 30px;
+      font-family: var(--font-cursive);
+      font-size: 1.05rem;
+      font-weight: 500;
+      transition: all 0.25s ease;
+      border: 2px solid var(--border2);
+      letter-spacing: 0.01em;
+    }
+
+    .cta-secondary:hover {
+      background: var(--bg3);
+      border-color: var(--text2);
+      transform: translateY(-3px);
+    }
+
+    /* ── Features ── */
+    .features {
+      position: relative;
+      z-index: 1;
+      padding: 80px 52px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+    }
+
+    .section-tag {
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-family: var(--font-cursive);
+      text-align: center;
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 56px;
+      color: var(--text);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    /* Feature card with radius hover */
+    .feature-card {
+      padding: 30px 26px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      background: var(--text);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 0;
+    }
+
+    .feature-card:hover {
+      border-color: var(--text);
+      transform: translateY(-6px) scale(1.01);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+
+    .feature-card:hover::before { opacity: 0.04; }
+
+    .feature-card > * { position: relative; z-index: 1; }
+
+    .feature-icon {
+      width: 48px; height: 48px;
+      background: var(--bg3);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover .feature-icon {
+      background: var(--text);
+      border-color: var(--text);
+      transform: scale(1.08) rotate(-4deg);
+    }
+
+    .feature-card h3 {
+      font-family: var(--font-cursive);
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: 0;
+    }
+
+    .feature-card p {
+      font-size: 0.84rem;
+      color: var(--text3);
+      line-height: 1.7;
+    }
+
+    /* ── How It Works ── */
+    .how-it-works {
+      position: relative;
+      z-index: 1;
+      padding: 80px 52px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .how-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+
+    .how-text { flex: 1; }
+
+    .how-text h2 {
+      font-family: var(--font-cursive);
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .how-text p {
+      font-size: 0.9rem;
+      color: var(--text2);
+      line-height: 1.75;
+      margin-bottom: 28px;
+    }
+
+    .how-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .how-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .step-num {
+      width: 28px; height: 28px;
+      background: var(--text);
+      color: var(--bg);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-cursive);
+      font-size: 0.9rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .how-step p {
+      font-size: 0.88rem;
+      color: var(--text2);
+      margin: 0;
+      line-height: 1.55;
+      padding-top: 3px;
+    }
+
+    .demo-preview {
+      flex: 1;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.10);
+    }
+
+    .demo-topbar {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .demo-messages { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    .demo-msg {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      max-width: 90%;
+    }
+
+    .demo-msg.user { background: var(--text); color: var(--bg); align-self: flex-end; border-bottom-right-radius: 3px; }
+    .demo-msg.bot { background: var(--bg3); color: var(--text); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 3px; }
+
+    /* ── Contact / Feedback ── */
+    .contact-section {
+      position: relative;
+      z-index: 1;
+      padding: 80px 52px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+    }
+
+    .contact-inner {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .contact-form {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      padding: 40px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    }
+
+    .contact-form .form-group {
+      margin-bottom: 18px;
+    }
+
+    .contact-form label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 7px;
+    }
+
+    .contact-form input,
+    .contact-form textarea,
+    .contact-form select {
+      width: 100%;
+      padding: 11px 14px;
+      background: var(--bg2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.2s ease;
+      resize: none;
+    }
+
+    .contact-form input:focus,
+    .contact-form textarea:focus,
+    .contact-form select:focus {
+      border-color: var(--text);
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+    }
+
+    [data-theme="dark"] .contact-form input:focus,
+    [data-theme="dark"] .contact-form textarea:focus {
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.06);
+    }
+
+    .contact-form textarea { min-height: 120px; }
+
+    .contact-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      border-radius: 30px;
+      font-family: var(--font-cursive);
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      margin-top: 8px;
+      letter-spacing: 0.01em;
+    }
+
+    .submit-btn:hover { opacity: 0.82; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .contact-success {
+      display: none;
+      text-align: center;
+      padding: 32px 20px;
+      animation: heroFade 0.4s ease;
+    }
+
+    .contact-success .check { font-size: 52px; margin-bottom: 16px; }
+
+    .contact-success h3 {
+      font-family: var(--font-cursive);
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .contact-success p { font-size: 0.88rem; color: var(--text3); margin-bottom: 24px; }
+
+    .contact-success .login-after-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      background: var(--text);
+      color: var(--bg);
+      border-radius: 24px;
+      font-family: var(--font-cursive);
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .contact-success .login-after-btn:hover { opacity: 0.8; transform: translateY(-2px); }
+
+    .contact-alert {
+      padding: 11px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    .contact-alert.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    [data-theme="dark"] .contact-alert.error { background: rgba(192,57,43,0.15); color: #f87171; border-color: rgba(192,57,43,0.3); }
+
+    /* ── Footer ── */
+    .footer {
+      position: relative;
+      z-index: 1;
+      background: var(--text);
+      color: var(--bg);
+      padding: 56px 52px 32px;
+    }
+
+    .footer-inner {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .footer-top {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 40px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 32px;
+    }
+
+    .footer-brand .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .footer-brand .logo-icon {
+      width: 30px; height: 30px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    .footer-brand .logo-name {
+      font-family: var(--font-cursive);
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .footer-brand p {
+      font-size: 0.82rem;
+      opacity: 0.5;
+      line-height: 1.7;
+      max-width: 220px;
+    }
+
+    .footer-col h4 {
+      font-family: var(--font-cursive);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      opacity: 0.9;
+    }
+
+    .footer-col a {
+      display: block;
+      font-size: 0.82rem;
+      opacity: 0.5;
+      margin-bottom: 10px;
+      transition: opacity 0.2s ease;
+    }
+
+    .footer-col a:hover { opacity: 1; }
+
+    .footer-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      opacity: 0.4;
+    }
+
+    .footer-bottom a { opacity: 1; color: inherit; }
+    .footer-bottom a:hover { opacity: 0.7; }
+
+    /* ── Animations ── */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .nav { padding: 0 20px; }
+      .hero { padding: 80px 20px 60px; min-height: auto; }
+      .features { padding: 60px 20px; }
+      .features-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
+      .how-it-works { padding: 60px 20px; }
+      .how-inner { flex-direction: column; gap: 36px; }
+      .contact-section { padding: 60px 20px; }
+      .contact-form { padding: 28px 22px; }
+      .contact-row { grid-template-columns: 1fr; }
+      .footer { padding: 48px 20px 28px; }
+      .footer-top { grid-template-columns: 1fr 1fr; gap: 28px; }
+    }
+
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2.2rem; }
+      .hero-ctas { flex-direction: column; width: 100%; gap: 12px; }
+      .btn { width: 100%; text-align: center; }
+      .nav-actions { gap: 6px; }
+      .nav-btn { padding: 6px 14px; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body class="index-page">
+
+<!-- Asteroid Canvas -->
+<canvas id="asteroidCanvas"></canvas>
+
+<!-- ── Navbar ── -->
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">RC</div>
+    
+  </div>
+  <div class="nav-actions">
+    <button class="theme-pill" id="themeToggle">🌙 <span id="themeLabel">Dark</span></button>
+    <a href="#contact" class="nav-link">Contact</a>
+    <a href="/login" class="nav-link">Sign in</a>
+    <a href="/register" class="nav-btn">Get started →</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    Powered by RAG + Gemini AI
+  </div>
+  <h1>Chat with your <em>PDFs</em>,<br>get instant answers</h1>
+  <p class="hero-sub">Upload any document and ask questions in plain English. RAGChat extracts, retrieves, and delivers accurate answers — powered by Google's Gemini AI.</p>
+  <div class="hero-ctas">
+    <a href="/register" class="cta-primary">✦ Start for free</a>
+    <a href="/login" class="cta-secondary">Sign in →</a>
+  </div>
+</section>
+
+<!-- ── Features ── -->
+<section class="features" id="features">
+  <div class="section-tag">Why RAGChat</div>
+  <h2 class="section-title">Everything you need to understand documents</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;font-size:1.1rem;letter-spacing:-0.04em;">RC</div>
+      <h3>Smart PDF parsing</h3>
+      <p>Upload any PDF — research papers, reports, contracts. Text is extracted page by page and split into overlapping chunks for precise retrieval.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <h3>RAG retrieval</h3>
+      <p>Only the most relevant sections of your document are sent to the AI — keeping answers accurate and grounded in your content.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>Gemini AI engine</h3>
+      <p>Google's Gemini 2.5 Flash powers the responses — fast, capable, and free to get started with the Gemini API.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📜</div>
+      <h3>Full history</h3>
+      <p>All your conversations are saved. Rename them, delete them, or pick up exactly where you left off across any session.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌙</div>
+      <h3>Dark &amp; light themes</h3>
+      <p>A refined minimal interface with one-click theme switching. Minimal cursive aesthetic — beautiful day or night.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>Secure by default</h3>
+      <p>Passwords hashed with Werkzeug, session-based auth, and real email links for password resets.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── How It Works ── -->
+<section class="how-it-works" id="how">
+  <div class="how-inner">
+    <div class="how-text">
+      <div class="section-tag" style="text-align:left;">How it works</div>
+      <h2>Up and running in seconds</h2>
+      <p>No complicated setup. Upload your document, type your question, and get an instant answer.</p>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="step-num">1</div>
+          <p><strong>Create your account</strong> — free, no credit card needed.</p>
+        </div>
+        <div class="how-step">
+          <div class="step-num">2</div>
+          <p><strong>Upload a PDF</strong> — drag and drop or click to browse.</p>
+        </div>
+        <div class="how-step">
+          <div class="step-num">3</div>
+          <p><strong>Ask anything</strong> — the AI finds the right answer from your document.</p>
+        </div>
+      </div>
+    </div>
+    <div class="demo-preview">
+      <div class="demo-topbar">
+        <div class="demo-dot" style="background:#ff5f57;"></div>
+        <div class="demo-dot" style="background:#febc2e;"></div>
+        <div class="demo-dot" style="background:#28c840;"></div>
+        <span style="font-size:0.72rem; color:var(--text3); margin-left:8px;">RAGChat — Q3 Report.pdf</span>
+      </div>
+      <div class="demo-messages">
+        <div class="demo-msg bot">📄 <strong>Q3 Report.pdf</strong> loaded — 42 chunks ready!</div>
+        <div class="demo-msg user">What was total revenue in Q3?</div>
+        <div class="demo-msg bot">Based on the report, total Q3 revenue was <strong>$4.2M</strong>, a 18% year-over-year increase, driven primarily by the enterprise segment.</div>
+        <div class="demo-msg user">Which region performed best?</div>
+        <div class="demo-msg bot">The <strong>APAC region</strong> outperformed all others with $1.8M in revenue, up 31% from the prior quarter.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Contact / Feedback ── -->
+<section class="contact-section" id="contact">
+  <div class="contact-inner">
+    <div class="section-tag" style="text-align:center;">Get in touch</div>
+    <h2 class="section-title">Feedback &amp; Contact Us</h2>
+
+    <div class="contact-form">
+      <div class="contact-alert error" id="contactError"></div>
+
+      <!-- Form -->
+      <div id="contactFormBody">
+        <div class="contact-row">
+          <div class="form-group">
+            <label for="cName">Your name</label>
+            <input type="text" id="cName" placeholder="Tilak Achary">
+          </div>
+          <div class="form-group">
+            <label for="cEmail">Email address</label>
+            <input type="email" id="cEmail" placeholder="you@example.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cSubject">Subject</label>
+          <input type="text" id="cSubject" placeholder="Feature request / Bug report / General feedback">
+        </div>
+        <div class="form-group">
+          <label for="cMessage">Message</label>
+          <textarea id="cMessage" placeholder="Tell us what's on your mind…"></textarea>
+        </div>
+        <button class="submit-btn" id="contactSubmitBtn">
+          <span id="contactBtnText">Send Message ✦</span>
+        </button>
+      </div>
+
+      <!-- Success state -->
+      <div class="contact-success" id="contactSuccess">
+        <div class="check">📬</div>
+        <h3>Message received!</h3>
+        <p>Thanks for reaching out. We've received your message and will get back to you soon.</p>
+        <a href="/login" class="login-after-btn">Sign in to RAGChat →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="logo">
+          <div class="logo-icon" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;font-size:1.5rem;color:var(--bg);letter-spacing:-0.04em;line-height:1;">RC</div>
+          <span class="logo-name">RAGChat</span>
+        </div>
+        <p>Intelligent document conversations powered by Google Gemini AI and RAG retrieval.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#contact">Contact</a>
+      </div>
+      <div class="footer-col">
+        <h4>Account</h4>
+        <a href="/login">Sign in</a>
+        <a href="/register">Create account</a>
+        <a href="/reset-password">Reset password</a>
+      </div>
+      <div class="footer-col">
+        <h4>Tech stack</h4>
+        <a href="#">Flask + Python</a>
+        <a href="#">Gemini 2.5 Flash</a>
+        <a href="#">SQLite + SQLAlchemy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 RAGChat. Built with ♥ and Gemini AI.</span>
+      <span><a href="/login">Sign in</a> · <a href="/register">Register</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── Theme ────────────────────────────────────────────────────────────────────
+const savedTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+const themeToggle = document.getElementById('themeToggle');
+const themeLabel  = document.getElementById('themeLabel');
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+  if (theme === 'dark') {
+    themeToggle.innerHTML = '☀️ <span id="themeLabel">Light</span>';
+  } else {
+    themeToggle.innerHTML = '🌙 <span id="themeLabel">Dark</span>';
+  }
+}
+
+applyTheme(savedTheme);
+
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+});
+
+// ── Asteroid Canvas ─────────────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('asteroidCanvas');
+  const ctx    = canvas.getContext('2d');
+
+  let W, H, asteroids = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function isDark() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  function randBetween(a, b) { return a + Math.random() * (b - a); }
+
+  function createAsteroid() {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = randBetween(0.3, 1.4);
+    const size  = randBetween(1.2, 4.5);
+    return {
+      x:    Math.random() * W,
+      y:    Math.random() * H,
+      vx:   Math.cos(angle) * speed,
+      vy:   Math.sin(angle) * speed,
+      size,
+      tail: randBetween(3, 12),
+      opacity: randBetween(0.25, 0.85),
+      shape: Math.random() > 0.5 ? 'circle' : 'diamond',
+    };
+  }
+
+  function init() {
+    resize();
+    asteroids = [];
+    const count = Math.floor(W * H / 14000);
+    for (let i = 0; i < count; i++) asteroids.push(createAsteroid());
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    const dark = isDark();
+    const color = dark ? '220,220,220' : '40,40,40';
+
+    asteroids.forEach(a => {
+      ctx.save();
+      ctx.globalAlpha = a.opacity;
+      ctx.strokeStyle = `rgba(${color},${a.opacity})`;
+      ctx.fillStyle   = `rgba(${color},${a.opacity})`;
+      ctx.lineWidth   = 0.8;
+
+      // Draw tail
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(a.x - a.vx * a.tail, a.y - a.vy * a.tail);
+      ctx.globalAlpha = a.opacity * 0.25;
+      ctx.stroke();
+
+      // Draw body
+      ctx.globalAlpha = a.opacity;
+      if (a.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.size, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        const s = a.size * 1.4;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y - s);
+        ctx.lineTo(a.x + s, a.y);
+        ctx.lineTo(a.x, a.y + s);
+        ctx.lineTo(a.x - s, a.y);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Move
+      a.x += a.vx;
+      a.y += a.vy;
+
+      // Wrap around
+      if (a.x < -20) a.x = W + 20;
+      if (a.x > W + 20) a.x = -20;
+      if (a.y < -20) a.y = H + 20;
+      if (a.y > H + 20) a.y = -20;
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', init);
+  init();
+  draw();
+})();
+
+// ── Contact Form ─────────────────────────────────────────────────────────────
+document.getElementById('contactSubmitBtn').addEventListener('click', async () => {
+  const name    = document.getElementById('cName').value.trim();
+  const email   = document.getElementById('cEmail').value.trim();
+  const subject = document.getElementById('cSubject').value.trim();
+  const message = document.getElementById('cMessage').value.trim();
+  const errEl   = document.getElementById('contactError');
+
+  errEl.style.display = 'none';
+
+  if (!name || !email || !subject || !message) {
+    errEl.textContent = 'Please fill in all fields.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('contactSubmitBtn');
+  btn.disabled = true;
+  document.getElementById('contactBtnText').innerHTML = '<span style="opacity:0.6">Sending…</span>';
+
+  try {
+    const res  = await fetch('/api/contact', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ name, email, subject, message })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('contactFormBody').style.display = 'none';
+      document.getElementById('contactSuccess').style.display  = 'block';
+    } else {
+      errEl.textContent = data.error || 'Failed to send. Please try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      document.getElementById('contactBtnText').textContent = 'Send Message ✦';
+    }
+  } catch (e) {
+    errEl.textContent = 'Connection error. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    document.getElementById('contactBtnText').textContent = 'Send Message ✦';
+  }
+});
+</script>
+</body>
+</html>

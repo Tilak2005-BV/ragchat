@@ -1,4 +1,4 @@
-﻿from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -502,9 +502,9 @@ Be concise, clear, and helpful. Format responses with markdown when appropriate.
     except Exception as e:
         error_str = str(e).lower()
         if "429" in error_str or "resource_exhausted" in error_str or "quota" in error_str:
-            assistant_reply = "your quote is over come back and try again after 5 mins"
+            return jsonify({'error': 'Quota exceeded. Please try again in 5 minutes.'}), 429
         else:
-            assistant_reply = f"I encountered an error processing your request. Please ensure GEMINI_API_KEY is set. Error: {str(e)}"
+            return jsonify({'error': f'I encountered an error processing your request. Error: {str(e)}'}), 500
 
     asst_msg = ChatMessage(conversation_id=conv.id, role='assistant', content=assistant_reply)
     db.session.add(asst_msg)

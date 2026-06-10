@@ -469,7 +469,7 @@
 <div class="chat-layout">
 
   <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar collapsed" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <div class="sidebar-logo-icon"><span class="rc-mark" style="font-size:1rem;">RC</span></div>
@@ -520,6 +520,7 @@
     <div class="chat-topbar">
       <div style="display:flex; align-items:center; gap:10px;">
         <button class="topbar-btn" id="sidebarToggle" title="Toggle sidebar">☰</button>
+        <button class="topbar-btn" id="newChatTopBtn" title="New Chat" onclick="newChat()" style="margin-left: -5px;">📝</button>
         <span class="chat-topbar-title" id="topbarTitle">RAGChat</span>
         <span class="model-badge"><span class="model-badge-dot"></span>Gemini 2.5</span>
       </div>
